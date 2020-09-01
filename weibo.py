@@ -32,6 +32,7 @@ def get_config(id="all"):
 
 
 config = get_config("pushover")
+
 def pushover(msg=None):
     conn = http.client.HTTPSConnection("api.pushover.net:443")
     conn.request(
@@ -65,45 +66,49 @@ last_time = int(
 weibo_data = {}
 
 while True:
-    # url = 'https://weibo.com/u/7230522444?is_search=0&visible=0&is_all=1&is_tag=0&profile_ftype=1&page=1#feedtop'
-    url = "https://weibo.com/u/7230522444?is_all=1" # 运势学家王明磊
-    req = requests.get(url, headers=headers, cookies=cookies)
-    print('resp:', req.ok)
-    req = req.text
-    detail = re.findall(r"WB_detail(.*?)WB_like", req, re.I)  # WB_detail
+    try:
+        # url = 'https://weibo.com/u/7230522444?is_search=0&visible=0&is_all=1&is_tag=0&profile_ftype=1&page=1#feedtop'
+        url = "https://weibo.com/u/7230522444?is_all=1" # 运势学家王明磊
+        req = requests.get(url, headers=headers, cookies=cookies)
+        now_time = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        print('resp:', req.ok, now_time)
+        req = req.text
+        detail = re.findall(r"WB_detail(.*?)WB_like", req, re.I)  # WB_detail
+        # for i in detail:
+        i = detail[0]
+        weibo_data["datetime"] = re.search(
+            r"(\d{4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2})", i, re.I
+        ).group()  # 日期和时间
+        nickname = re.search(r'nick-name=\\"(.*?)\\">', i, re.I).group()
+        nickname = nickname.replace('nick-name=\\"', "")  # 删除nick-name=\"
+        weibo_data["nickname"] = nickname.replace('\\">', "")  # 删除\"> #博主名称
 
-    # for i in detail:
-    i = detail[0]
-    weibo_data["datetime"] = re.search(
-        r"(\d{4}-\d{1,2}-\d{1,2}\s\d{1,2}:\d{1,2})", i, re.I
-    ).group()  # 日期和时间
+        weibotext = re.search(r'nick-name=\\"(.*?)<\\/div>', i, re.I).group()
 
-    nickname = re.search(r'nick-name=\\"(.*?)\\">', i, re.I).group()
-    nickname = nickname.replace('nick-name=\\"', "")  # 删除nick-name=\"
-    weibo_data["nickname"] = nickname.replace('\\">', "")  # 删除\"> #博主名称
+        weibotext = re.search(r'>\\n(.*?)<\\/div>', weibotext, re.I).group()
+        weibotext = weibotext.replace(" ", "")  # 删除空格
+        weibotext = weibotext.replace(">\\n", "")  # 删除>\n
+        weibotext = weibotext.replace("<\\/div>", "")  # 删除<\/div>
+        weibo_data["weibotext"] = weibotext.replace("<br>", "\n")  # <br>替换换行
 
-    weibotext = re.search(r'nick-name=\\"(.*?)<\\/div>', i, re.I).group()
-    weibotext = re.search(r">\\n(.*?)<\\/div>", weibotext, re.I).group()
-    weibotext = weibotext.replace(" ", "")  # 删除空格
-    weibotext = weibotext.replace(">\\n", "")  # 删除>\n
-    weibotext = weibotext.replace("<\\/div>", "")  # 删除<\/div>
-    weibo_data["weibotext"] = weibotext.replace("<br>", "\n")  # <br>替换换行
-
-    new_time = int(time.mktime(time.strptime(weibo_data["datetime"], "%Y-%m-%d %H:%M")))
-    new_msg = (
-        weibo_data["nickname"]
-        + " "
-        + weibo_data["datetime"]
-        + "\n"
-        + weibo_data["weibotext"]
-    )
-    if new_time > last_time:
-        pushover(new_msg)
-        last_time = new_time
-        print('今日运程播报获取成功,已推送到手机上,请查看!!')
-    else:
-        print('监控中! 最近一次更新时间:', weibo_data['datetime'])
+        new_time = int(time.mktime(time.strptime(weibo_data["datetime"], "%Y-%m-%d %H:%M")))
+        new_msg = (
+            weibo_data["nickname"]
+            + " "
+            + weibo_data["datetime"]
+            + "\n"
+            + weibo_data["weibotext"]
+        )
+        if new_time > last_time:
+            pushover(new_msg)
+            last_time = new_time
+            print('今日运程播报获取成功,已推送到手机上,请查看!!')
+        else:
+            print('监控中! 最近一次更新时间:', weibo_data['datetime'])
+    except Exception as e:
+        print (e)
     time.sleep(60)
+    
     # try:
     #     time.sleep(5)
     # except Exception as e:
