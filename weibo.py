@@ -107,7 +107,7 @@ while True:
             print('监控中! 最近一次更新时间:', weibo_data['datetime'])
     except Exception as e:
         print (e)
-    time.sleep(60)
+    time.sleep(120)
     
     # try:
     #     time.sleep(5)
